@@ -1,67 +1,67 @@
-# YuE2 Windows Portable — ИИ-песенная студия на твоём ПК
+# YuE2 Windows Portable — AI Song Studio on Your Own PC
 
-Полноценные песни из текста, редактирование партитуры, каверы и конверсия голоса — на Windows, офлайн после первой установки, на видеокартах NVIDIA от 12 ГБ[cite: 4]. Без Docker, без Linux, без conda[cite: 4].
+Full songs from lyrics, score editing, covers, and voice conversion — on Windows, offline after the first setup, on NVIDIA GPUs from 12 GB VRAM. No Docker, no Linux, no conda.
 
-[YouTube-демо](#) • [Boosty — расширенная версия](#) • [Hugging Face](#) • [Релизы](#) • [🇬🇧 EN Version](README.md)
+[YouTube Demo](#) • [Boosty — Extended Edition](#) • [Hugging Face](#) • [Releases](#) • [🇷🇺 Русская версия](README_ru.md)
 
-## Сначала личное
-Я коплю, чтобы забрать невесту с Филиппин в свою страну — оформление документов и переезд стоят больше, чем я могу заработать быстро. Поэтому этот проект — мой честный сбор: **базовая версия бесплатна здесь и навсегда**, а **расширенная** (кавер-режим + автоустановка RVC/Seed-VC) финансирует цель на Boosty. Когда цель будет достигнута, всё, что сегодня на Boosty, станет публичным на этих страницах. Никаких платных знаний — просто фора для тех, кто хочет помочь.
+## A Personal Note First
+I'm saving up to bring my fiancée from the Philippines to my country — visa paperwork and relocation cost more than I can earn quickly. So this project is my honest fundraiser: **the Basic edition is free here, forever**, and the **Extended edition** (cover mode + one-click RVC/Seed-VC voice conversion) funds the goal on Boosty. When the goal is reached, everything that is on Boosty today will go public on these pages. No paywalled knowledge — just a head start for those who want to help.
 
-## Что это
-Windows-упаковка YuE2 и компании с нулевым порогом входа:
-- **Вкладка 1 — Текст → Песня:** текст + стиль-промпт → готовая песня (вокал + инструменты); уверенное пение на RU/EN/ZH/JA/KO/ES[cite: 4].
-- **Вкладка 2 — Редактор партитуры:** перерендер ABC-партитуры с новым стилем, темпом или сидом без перегенерации композиции[cite: 4].
-- **Вкладка 3 — Кавер (расширенная):** любой MP3 → транскрибация мелодии и текста (SheetSage2 + faster-whisper) → кавер в новом стиле.
-- **Конверсия голоса (расширенная):** RVC (обученные голоса) и Seed-VC (zero-shot по референсу 10–30 секунд).
-- **Лестница VRAM:** авто-тайлинг/чанкование — 24 ГБ+ рекомендуется, 16 ГБ поддерживается, 12 ГБ экспериментально[cite: 4].
-- **Установщик:** встроенный Python 3.10, полностью запиненные freeze, портабл ffmpeg, офлайн-веса RVC, возобновляемая установка с гейтами и логами[cite: 3].
+## What It Is
+A zero-config Windows packaging of YuE2 and friends that simply works:
+- **Tab 1 — Text → Song:** lyrics + style prompt → complete song (vocals + instruments); confident singing in RU/EN/ZH/JA/KO/ES.
+- **Tab 2 — Score Editor:** rerender the ABC score with a new style, tempo, or seed without regenerating the composition.
+- **Tab 3 — Cover (Extended):** any MP3 → melody + lyrics transcription (SheetSage2 + faster-whisper) → cover in a new style.
+- **Voice Conversion (Extended):** RVC (trained voices) and Seed-VC (zero-shot from a 10–30 s reference clip).
+- **VRAM Ladder:** auto tiling/chunking — 24 GB+ recommended, 16 GB supported, 12 GB experimental.
+- **Installer:** embedded Python 3.10, fully pinned freezes, portable ffmpeg, offline RVC base weights, resumable gated setup with logs.
 
-## Редакции
-| Возможность | Базовая — Бесплатно (этот репо) | Расширенная — Boosty |
+## Editions
+| Feature | Basic — Free (This Repo) | Extended — Boosty |
 |---|---|---|
-| Текст→Песня + редактор партитуры[cite: 4] | ✅ | ✅ |
-| Кавер-режим (вкладка 3) | — | ✅ |
-| Автоустановщик RVC + Seed-VC | — | ✅ |
-| Установщик (`setup.bat`)[cite: 3] | Lite меню | Full меню (VC) |
+| Text→Song + Score Editor | ✅ | ✅ |
+| Cover mode (Tab 3) | — | ✅ |
+| RVC + Seed-VC auto-installer | — | ✅ |
+| Installer (`setup.bat`) | Lite menu | Full menu (VC) |
 
-*Когда цель с невестой будет достигнута, расширенная сборка выйдет здесь публичным релизом.*
+*Once the fiancée goal is reached, the Extended build is published here as a public release.*
 
-## Быстрый старт
-1. Скачайте архив `YuE2-Lite-Portable.zip` из [Releases](https://github.com/Darniell/YuE2-Windows-Portable/releases).
-2. Распакуйте в любую папку (избегайте `Program Files`).
-3. Запустите `setup.bat` (Auto или Manual пресет)[cite: 3].
-4. Запустите `verify_install.bat` → `start_webui.bat` → откройте `http://127.0.0.1:9099`[cite: 3, 4].
-5. Первый запуск скачивает веса YuE2 (~8 ГБ) с официальных репозиториев Hugging Face по их исходным лицензиям[cite: 4].
+## Quick Start
+1. Download `YuE2-Lite-Portable.zip` from [Releases](https://github.com/Darniell/YuE2-Windows-Portable/releases).
+2. Extract it anywhere (do **not** use `Program Files`).
+3. Run `setup.bat` (Auto or Manual preset).
+4. Run `verify_install.bat` → `start_webui.bat` → open `http://127.0.0.1:9099`.
+5. First launch downloads YuE2 weights (~8 GB) from official Hugging Face repos under their original licenses.
 
-## Требования и матрица поддержки
-- **ОС:** Windows 10/11 x64[cite: 4].
-- **Видеокарта:** NVIDIA GPU с поддержкой CUDA[cite: 4].
-- **VRAM:** 24 ГБ+ рекомендуется; 16 ГБ поддерживается (авто-чанкование, чуть медленнее рендер); 12 ГБ экспериментально. *Примечание: Есть вероятность стабильной работы на 11 ГБ RTX 2080 Ti.*
-- **Диск:** ~15–40 ГБ свободного места.
+## Requirements & Support Matrix
+- **OS:** Windows 10/11 x64.
+- **GPU:** NVIDIA GPU with CUDA.
+- **VRAM:** 24 GB+ recommended; 16 GB supported (auto-chunked synthesize, slower render); 12 GB experimental. *Note: There is a possibility of running it on an 11 GB RTX 2080 Ti.*
+- **Disk:** ~15–40 GB free space.
 
-| Серия GPU | Compute Cap | Профиль | Статус |
+| GPU Series | Compute Cap | Profile | Status |
 |---|---|---|---|
-| RTX 30 / 40[cite: 4] | 8.6 / 8.9[cite: 4] | P1 (cu121)[cite: 4] | проверено[cite: 4] |
-| RTX 50[cite: 4] | 10.0 / 12.0[cite: 4] | P2 (cu128)[cite: 4] | экспериментально[cite: 4] |
-| Другие[cite: 4] | <8.6[cite: 4] | P1 + предупреждение[cite: 4] | не тестировалось[cite: 4] |
+| RTX 30 / 40 | 8.6 / 8.9 | P1 (cu121) | fully tested |
+| RTX 50 | 10.0 / 12.0 | P2 (cu128) | experimental |
+| Other | <8.6 | P1 + warning | not tested |
 
-## Решение проблем и поддержка через ИИ
-Если у вас возникли ошибки при установке или генерации музыки, изучите файл **[HELP_TROUBLESHOOTING_RU.md](HELP_TROUBLESHOOTING_RU.md)**. Там пошагово описано, как подключить бесплатного ИИ-агента (например, Verdent), чтобы он автоматически проанализировал ваши логи на основе системного плейбука (`SUPPORT_AGENT_RU.md`) и починил сборку[cite: 2].
+## Troubleshooting & Support
+If you encounter errors during setup or generation, check out **[HELP_TROUBLESHOOTING_EN.md](HELP_TROUBLESHOOTING_EN.md)**. It explains how to use a free AI agent (like Verdent) to automatically read your logs and fix the installation using the built-in system playbook (`SUPPORT_AGENT.md`).
 
-## Ручные пресеты
-`setup.bat /manual` открывает выбор нужного профиля:
-1. RTX 30 (`series: 30`, `ch_main: cu121`)[cite: 4]
-2. RTX 40 (`series: 40`, `ch_main: cu121`)[cite: 4]
-3. RTX 50 (`series: 50`, `ch_main: cu128`)[cite: 4]
-4. Другая / старая карта (`series: other`, `ch_main: cu121`)[cite: 4]
+## Manual Presets
+`setup.bat /manual` opens numbered presets:
+1. RTX 30 (`series: 30`, `ch_main: cu121`)
+2. RTX 40 (`series: 40`, `ch_main: cu121`)
+3. RTX 50 (`series: 50`, `ch_main: cu128`)
+4. Other/older (`series: other`, `ch_main: cu121`)
 
-## Гигиена кэша и архитектура
-- **Диск C в безопасности:** Установщик ничего не пишет на системный диск. `pip_cache/`, `.meta/` и `.tmp/` остаются строго внутри папки дистрибутива[cite: 3].
-- **Идемпотентность:** Повторный запуск `setup.bat` безопасен. Сетевые шаги поддерживают авто-повтор при сбоях[cite: 3].
-- **Под капотом:** Встроенный Python 3.10.11 · запиненные `--no-deps` freeze · Windows-патч SDPA для yue2 · патч symlink-race для huggingface-hub[cite: 3].
+## Cache Hygiene & Architecture
+- **No disk C clutter:** The installer writes nothing to disk C. `pip_cache/`, `.meta/`, and `.tmp/` stay inside the distribution folder.
+- **Idempotent setup:** Re-running `setup.bat` is safe. Network step 3 uses a 2-strike retry.
+- **Under the hood:** Embedded Python 3.10.11 · pinned `--no-deps` freezes · Windows SDPA patch for yue2 · huggingface-hub symlink-race patch.
 
-## Апстрим и лицензии
-Репозиторий содержит только инструментарий и установщики — **без весов моделей**. YuE2, SheetSage2, RVC, Seed-VC, demucs, faster-whisper и ffmpeg принадлежат их авторам; веса скачиваются из официальных репозиториев при первом запуске под исходными лицензиями. Код упаковки: MIT.
+## Upstream & Licenses
+This repository ships tooling and installers only — **no model weights**. YuE2, SheetSage2, RVC, Seed-VC, demucs, faster-whisper, and ffmpeg remain property of their authors; weights are downloaded from official repositories at first launch under their original licenses. Packaging code: MIT.
 
-## Поддержка
-Boosty (расширенная версия + обновления) • YouTube-демо • ⭐ Звёзды и репосты напрямую приближают воссоединение с невестой. Спасибо за поддержку!
+## Support
+Boosty (Extended + updates) • YouTube Demo • ⭐ Stars and shares move the fiancée goal directly. Thank you!
