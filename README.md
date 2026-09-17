@@ -36,7 +36,7 @@ A zero-config Windows packaging of YuE2 and friends that simply works:
 ## Requirements & Support Matrix
 - **OS:** Windows 10/11 x64[cite: 4].
 - **GPU:** NVIDIA GPU with CUDA[cite: 4].
-- **VRAM:** 24 GB+ recommended; 16 GB supported (auto-chunked synthesize, slower render); 12 GB experimental (requires `YUE2_ALLOW_12GB=1`)[cite: 4]. *Note: There is a possibility of running it on an 11 GB RTX 2080 Ti.*
+- **VRAM:** 24 GB+ recommended; 16 GB supported (auto-chunked synthesize, slower render); 12 GB experimental. *Note: There is a possibility of running it on an 11 GB RTX 2080 Ti.*
 - **Disk:** ~15–40 GB free space.
 
 | GPU Series | Compute Cap | Profile | Status |
