@@ -1,0 +1,64 @@
+--- a/yue2/cuda_graph.py
++++ b/yue2/cuda_graph.py
+@@ -68,19 +68,20 @@
+         self.prefixes = [[int(token) for token in prefix] for prefix in prefixes]
+         self.max_tokens, self.branches = int(max_tokens), len(prefixes)
+         self.capacity = max(map(len, prefixes)) + self.max_tokens
+-        self.capture, self.graph, self.output = capture, None, None
++        # SDPA backends are not capture-safe on Windows ("operation not
++        # permitted when stream is capturing"). Disable CUDA Graphs entirely
++        # and run decode eagerly through the standard attention path.
++        self.capture, self.graph, self.output = False, None, None
+         if attention_backend not in {"auto", "flash", "cudnn", "sdpa"}:
+             raise ValueError("attention_backend must be auto, flash, cudnn, or sdpa")
+         fused = self.device.type == "cuda" and self.dtype in {torch.bfloat16, torch.float16} and config.head_dim % 8 == 0
+-        flash = fused and config.head_dim <= 256 and hasattr(torch.ops.aten, "_flash_attention_forward") and (
+-            "seqused_k" in str(torch.ops.aten._flash_attention_forward.default._schema))
+-        # Torch 2.10 is pinned by the package. Its native variable-length FA
+-        # accepts GPU effective lengths; the public masked SDPA can select a
+-        # much slower math kernel. Keep a cuDNN/public-SDPA fallback explicit.
++        # Windows PyTorch builds ship the aten FA schema but raise
++        # "USE_FLASH_ATTENTION was not enabled for build" at call time.
++        # Never select the flash backend; decode runs on native SDPA.
+         if attention_backend == "auto":
+-            attention_backend = "flash" if flash else "cudnn" if fused and torch.backends.cudnn.is_available() else "sdpa"
+-        if attention_backend == "flash" and not flash:
+-            raise ValueError("Pinned PyTorch variable-length CUDA FlashAttention is unavailable")
++            attention_backend = "cudnn" if fused and torch.backends.cudnn.is_available() else "sdpa"
++        if attention_backend == "flash":
++            raise ValueError("aten variable-length FlashAttention is unavailable; use sdpa or cudnn")
+         if attention_backend == "cudnn" and not (fused and torch.backends.cudnn.is_available()):
+             raise ValueError("cuDNN attention requires a supported CUDA dtype/head dimension")
+         self.attention_backend = attention_backend
+@@ -113,10 +114,7 @@
+         backbone = self.model.model
+         cos, sin = backbone.rotary_emb(self.positions[:, None])
+         x = backbone.embed_tokens(self.tokens)
+-        visible = None
+-        if self.attention_backend != "flash":
+-            visible = (self.key_positions[None, :] <= self.positions[:, None])[:, None, None, :]
+-        used_lengths = (self.positions + 1).to(torch.int32)
++        visible = (self.key_positions[None, :] <= self.positions[:, None])[:, None, None, :]
+         config = self.model.config
+         slots = self.positions[:, None, None, None].expand(
+             self.branches, 1, config.num_key_value_heads, config.head_dim)
+@@ -138,16 +136,9 @@
+             values.scatter_(1, slots, v)
+             # All allocated slots are present, but only each branch's completed
+             # prefix and the current token are visible. Future slots never leak.
+-            if self.attention_backend == "flash":
+-                # seqused_k is respected by the 3D packed/varlen entrypoint.
+-                # The 4D fixed-batch entrypoint ignores it in torch 2.10, so do
+-                # not replace this call with an apparently equivalent 4D call.
+-                h = torch.ops.aten._flash_attention_forward(
+-                    q[:, 0], keys.view(-1, config.num_key_value_heads, config.head_dim),
+-                    values.view(-1, config.num_key_value_heads, config.head_dim),
+-                    self.cu_q, self.cu_k, 1, self.capacity, 0.0, False, False,
+-                    seqused_k=used_lengths)[0][:, None]
+-            elif self.attention_backend == "cudnn":
++            # SDPA layout: (B, H, Seq, Dim) — q/k/v are (B, 1, H, Dim), so
++            # transpose to (B, H, 1, Dim) before and back after the kernel.
++            if self.attention_backend == "cudnn":
+                 from torch.nn.attention import SDPBackend, sdpa_kernel
+                 with sdpa_kernel(SDPBackend.CUDNN_ATTENTION):
+                     h = F.scaled_dot_product_attention(q.transpose(1, 2), keys.transpose(1, 2), values.transpose(1, 2),

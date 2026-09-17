@@ -1,66 +1,70 @@
-# YuE2 Windows Portable — AI Song Studio on Your Own PC
+# YuE2 Web UI Lite
 
-Full songs from lyrics, score editing, covers and voice conversion — on Windows,
-offline after first setup, on NVIDIA GPUs from 12 GB VRAM. No Docker, no Linux, no conda.
+Local web panel (Gradio) for autoregressive song synthesis with YuE2-3B:
+Text2Music and Score Editor. Server: `127.0.0.1:9099`.
 
-[YouTube demo](#) • [Boosty — Extended edition](#) • [Hugging Face](#) • [Latest release](#) • [RU версия](README_ru.md)
+Voice conversion and Cover mode are available in the FULL version.
 
-## A personal note first
-I'm saving up to bring my fiancée from the Philippines to my country — visa paperwork
-and relocation cost more than I can earn quickly. So this project is my honest fundraiser:
-the **Basic edition is free here, forever**, and the **Extended edition** (cover mode +
-one-click RVC/Seed-VC voice conversion) funds the goal on Boosty. When the goal is reached,
-everything that is on Boosty today goes public on these pages. No paywalled knowledge —
-just a head start for those who want to help.
+## Launch
 
-## What it is
-A zero-config Windows packaging of YuE2 and friends that simply works:
-- **Tab 1 — Text → Song:** lyrics + style prompt → complete song (vocals + instruments);
-  confident singing in ru/en/zh/ja/ko/es.
-- **Tab 2 — Score Editor:** rerender the ABC score with a new style, tempo or seed
-  without regenerating the composition.
-- **Tab 3 — Cover (Extended):** any MP3 → melody + lyrics transcription
-  (SheetSage2 + faster-whisper) → cover in a new style.
-- **Voice conversion (Extended):** RVC (trained voices) and Seed-VC (zero-shot from a
-  10–30 s reference clip).
-- **VRAM ladder:** auto tiling/chunking — 24 GB+ recommended, 16 GB supported,
-  12 GB experimental.
-- **Installer:** embedded Python 3.10, fully pinned freezes, portable ffmpeg,
-  offline RVC base weights, resumable gated setup with logs.
+```bat
+start_webui.bat
+```
 
-## Editions
-| | Basic — free (this repo) | Extended — Boosty |
-|---|---|---|
-| Text→Song + Score Editor | ✅ | ✅ |
-| Cover mode (Tab 3) | — | ✅ |
-| RVC + Seed-VC auto-installer | — | ✅ |
-| Installer | `setup.bat` (lite) | `setup.bat` (full, VC menu) |
-
-When the fiancée goal is reached, the Extended build is published here as a public release.
-
-## Quick start
-1. Download the Basic zip from Releases; verify SHA256.
-2. Unpack anywhere (not Program Files), run `setup.bat` (Auto or Manual preset).
-3. `verify_install.bat` → `start_webui.bat` → http://127.0.0.1:9099
-4. First launch downloads YuE2 weights (~8 GB) from official Hugging Face repos
-   under their original licenses.
+The model loads into VRAM once at startup.
 
 ## Requirements
-- Windows 10/11 x64; NVIDIA GPU: 24 GB+ recommended / 16 GB supported / 12 GB experimental.
-- ~15-40 GB free disk; internet for first-launch weights only.
 
-## Under the hood
-Embedded Python 3.10.11 · pinned `--no-deps` freezes · Windows SDPA patch for yue2 ·
-huggingface-hub symlink-race patch · VRAM ladder with per-machine calibration ·
-portable ffmpeg bundle · EN/RU UI · prompt helpers with structure tags.
+- NVIDIA GPU, CUDA (PyTorch cu121/cu126/cu128 - channel depends on GPU series).
+- VRAM: 24 GB recommended; 16 GB supported (auto-chunked synthesize, slower render); <12 GB not supported.
+- Windows; Python venv with all dependencies, model cache in `hf_cache/`.
 
-## Upstream & licenses
-This repository ships tooling and installers only — **no model weights**.
-YuE2, SheetSage2, RVC (rvc-python), Seed-VC, demucs, faster-whisper and the ffmpeg builds
-remain property of their authors; weights are downloaded from official repositories at first
-launch under their original licenses (some are non-commercial). By using this tool you accept
-upstream terms. My packaging code: MIT.
+## Support matrix
 
-## Support
-Boosty (Extended + updates) · YouTube demo · stars and shares move the fiancée goal directly.
-Thank you.
+| GPU | Compute cap | Profile | Status |
+|---|---|---|---|
+| RTX 30 / 40 | 8.6 / 8.9 | P1 (cu121) | fully tested |
+| RTX 50 | 10.0 / 12.0 | P2 (cu128) | experimental |
+| other | <8.6 | P1 + warning | not tested |
+
+VRAM classes: >=24 GB recommended, >=16 GB supported, >=12 GB experimental
+(requires `YUE2_ALLOW_12GB=1` before setup.bat), <12 GB not supported.
+
+## Manual presets
+
+`setup.bat /manual` opens numbered presets:
+
+| # | Preset | series | ch_main |
+|---|---|---|---|
+| 1 | RTX 30 | 30 | cu121 |
+| 2 | RTX 40 | 40 | cu121 |
+| 3 | RTX 50 | 50 | cu128 |
+| 4 | Other/older | other | cu121 |
+
+Then VRAM class: 1) Auto, 2) 24 GB, 3) 16 GB, 4) 12 GB experimental.
+Scriptable mode: `YUE2_MANUAL_MODE` + optional `YUE2_MANUAL_SERIES/_CH_MAIN/_VCLASS`.
+
+## Cache hygiene
+
+The installer writes nothing to disk C. `pip_cache/`, `.meta/` and `.tmp/`
+stay inside the distribution folder. After a successful install `pip_cache/`
+and `.meta/` may be removed.
+
+## Resume behavior
+
+Re-running `setup.bat` is safe: every step is idempotent. Network step 3
+(torch) uses a 2-strike retry; local steps do not retry.
+
+## Features
+
+- **Text2Music** - text + style -> track (cot: full/melody/no score, ODE steps, seed).
+- **Score Editor (Advanced)** - edit the ABC score of the last track and re-render
+  without regenerating the composition.
+
+When VRAM is low the synthesizer automatically falls back to chunking
+(single -> tiling -> chunked with OOM retry). Use `YUE2_VRAM_LIMIT_GB` to
+emulate a weaker GPU.
+
+## AI mechanic
+
+See `SUPPORT_AGENT.md` / `SUPPORT_AGENT_RU.md` for diagnostics and the F1-Fx playbook.
