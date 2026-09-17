@@ -27,8 +27,10 @@ The model loads into VRAM once at startup.
 | RTX 50 | 10.0 / 12.0 | P2 (cu128) | experimental |
 | other | <8.6 | P1 + warning | not tested |
 
-VRAM classes: >=24 GB recommended, >=16 GB supported, >=12 GB experimental
-(requires `YUE2_ALLOW_12GB=1` before setup.bat), <12 GB not supported.
+VRAM classes: >=24 GB recommended, >=16 GB supported, >=12 GB experimental, <12 GB not supported(There is a possibility of it running on an 11GB RTX 2080 Ti.).
+
+## Troubleshooting & Support
+If you encounter errors during setup or generation, check out [HELP_TROUBLESHOOTING_EN.md](HELP_TROUBLESHOOTING_EN.md). It explains how to use a free AI agent to automatically read your logs and fix the installation using the built-in system playbook.
 
 ## Manual presets
 
