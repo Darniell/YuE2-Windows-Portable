@@ -47,7 +47,7 @@ When the fiancée goal is reached, the Extended build is published here as a pub
 
 ## Requirements
 - Windows 10/11 x64; NVIDIA GPU: 24 GB+ recommended / 16 GB supported / 12 GB experimental.
-- ~40 GB free disk (Basic); internet for first-launch weights only.
+- ~15-40 GB free disk; internet for first-launch weights only.
 
 ## Under the hood
 Embedded Python 3.10.11 · pinned `--no-deps` freezes · Windows SDPA patch for yue2 ·
