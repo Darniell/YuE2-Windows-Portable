@@ -2,7 +2,7 @@
 
 Full songs from lyrics, score editing, covers, and voice conversion — on Windows, offline after the first setup, on NVIDIA GPUs from 12 GB VRAM. No Docker, no Linux, no conda.
 
-[YouTube Demo](#) • [Boosty — Extended Edition]([https://boosty.to/damonfox/posts/6b889787-60f4-4397-b9df-c4575b26ecd0?share=success_publish_link]) • [Hugging Face](#) • [Releases](#) • [🇷🇺 Русская версия](README_ru.md)
+[YouTube Demo](#) • [Boosty — Extended Edition](https://boosty.to/damonfox/posts/6b889787-60f4-4397-b9df-c4575b26ecd0?share=success_publish_link) • [Hugging Face](#) • [Releases](#) • [🇷🇺 Русская версия](README_ru.md)
 
 ## A Personal Note First
 I'm saving up to bring my fiancée from the Philippines to my country — visa paperwork and relocation cost more than I can earn quickly. So this project is my honest fundraiser: **the Basic edition is free here, forever**, and the **Extended edition** (cover mode + one-click RVC/Seed-VC voice conversion) funds the goal on Boosty. When the goal is reached, everything that is on Boosty today will go public on these pages. No paywalled knowledge — just a head start for those who want to help.
