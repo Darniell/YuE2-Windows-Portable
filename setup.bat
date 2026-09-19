@@ -260,9 +260,9 @@ if /i "%YUE2_SETUP_STOP_AFTER%"=="1.5" goto dry_done
 
 echo [2/6] Setting up pip...
 if not exist python\Lib\site-packages\pip (
-    python\python.exe tools\get-pip.py --no-warn-script-location
+    python\python.exe tools\get-pip.py --no-warn-script-location --no-index --find-links "%~dp0tools\wheelhouse"
 )
-python\python.exe -m pip install --no-input --upgrade pip setuptools wheel virtualenv
+python\python.exe -m pip install --no-input --no-index --upgrade --find-links "%~dp0tools\wheelhouse" pip setuptools wheel virtualenv
 call :gate 2 "pip + virtualenv" || exit /b 1
 if /i "%YUE2_SETUP_STOP_AFTER%"=="2" goto dry_done
 
@@ -279,7 +279,7 @@ if errorlevel 1 (
 if /i "%YUE2_SETUP_STOP_AFTER%"=="3" goto dry_done
 
 echo [4/6] Installing main dependencies...
-python\python.exe -m pip install --no-deps --no-input -r dist_freeze\requirements-main-freeze.txt
+python\python.exe -m pip install --no-deps --no-index --no-input --find-links "%~dp0tools\wheelhouse" -r dist_freeze\requirements-main-freeze.txt
 call :gate 4 "main dependencies" || exit /b 1
 if /i "%YUE2_SETUP_STOP_AFTER%"=="4" goto dry_done
 
