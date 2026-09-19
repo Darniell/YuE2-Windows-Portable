@@ -151,6 +151,13 @@ def _free_gb():
     return free / 2**30
 
 
+def _own_used_gb():
+    """VRAM, зарезервированная этим процессом (базовые веса + фрагментация)."""
+    if not torch.cuda.is_available():
+        return 0.0
+    return torch.cuda.memory_reserved() / 2**30
+
+
 # Длительность/токены последней генерации (для Status в UI и VRAM-гейта).
 _LAST_DURATION_SEC = 0.0
 _LAST_TOKENS = 0
@@ -288,19 +295,40 @@ def _measured_required_gb(minutes):
             - _SYNTH_OFFLOAD_DISCOUNT_GB + _FALLBACK_MARGIN_GB)
 
 
-def _chunk_budget_tokens(free):
-    """Бюджет токенов на чанк из свободной VRAM (пик чанка по замерам/калибровке)."""
-    slope = _mode_slope_gb_per_min("chunked")
+def _chunk_budget_tokens(free, own_used):
+    """Бюджет токенов на чанк из доступной VRAM (avail = free + own_used).
+
+    Наклон: (required - own_used) / tokens_total — прирост VRAM на токен сверх базы.
+    budget_tokens = free / наклон — сколько токенов помещается в свободную VRAM.
+    """
+    slope_per_min = _mode_slope_gb_per_min("chunked")
     margin = _READY_MARGIN_GB if _mode_ready("chunked") else _FALLBACK_MARGIN_GB
-    budget_min = (free - _SYNTH_BASE_GB - margin - _SYNTH_INTERCEPT_GB
-                  + _SYNTH_OFFLOAD_DISCOUNT_GB) / slope
-    return int(budget_min * _TOKENS_PER_MIN)
+    # required = base + intercept + slope*min - offload + margin
+    # own_used ≈ base (веса модели); delta = required - own_used = рост синтеза
+    req_1min = (_SYNTH_BASE_GB + _SYNTH_INTERCEPT_GB
+                + slope_per_min * 1.0
+                - _SYNTH_OFFLOAD_DISCOUNT_GB + margin)
+    delta_per_min = max(0.1, req_1min - own_used)
+    slope_per_token = delta_per_min / _TOKENS_PER_MIN
+    if slope_per_token <= 0:
+        return int(1e9)  # нет роста -> без ограничений
+    budget = int(free / slope_per_token)
+    return budget
 
 
-def _chunk_gate_free_gb():
-    """Порог гейта: free >= этого => чанкование ОБЯЗАНО быть попытано
-    (чанк 1.0-1.2 мин по калибровке tiling+offload <= ~12 GB)."""
-    return _measured_required_gb(1.1) + 1.0
+def _chunk_gate_avail_gb(own_used):
+    """Порог гейта на маргинальной базе: own_used + slope*min_tokens <= avail.
+
+    Гарантирует, что минимальный осмысленный чанк (_MIN_CHUNK_TOKENS) поместится
+    в доступную VRAM (avail = free + own_used).
+    """
+    slope_per_min = _mode_slope_gb_per_min("chunked")
+    margin = _READY_MARGIN_GB if _mode_ready("chunked") else _FALLBACK_MARGIN_GB
+    min_minutes = _MIN_CHUNK_TOKENS / _TOKENS_PER_MIN
+    req = (_SYNTH_BASE_GB + _SYNTH_INTERCEPT_GB
+           + slope_per_min * min_minutes
+           - _SYNTH_OFFLOAD_DISCOUNT_GB + margin)
+    return req  # avail >= req => чанк гарантирован
 
 
 def _gate_error(minutes, free, reason=""):
@@ -311,35 +339,44 @@ def _gate_error(minutes, free, reason=""):
 _load_calibration()
 
 
-def _ladder(minutes, free, n_tokens, prefix_len):
-    """Решение лестницы синтеза. Возвращает (decision, context, reason)."""
+def _ladder(minutes, free, n_tokens, prefix_len, own_used):
+    """Решение лестницы синтеза. avail = free + own_used (исключает double-count весов).
+
+    Returns (decision, context, reason).
+    """
     required = _required_gb(minutes)
     measured = _measured_required_gb(minutes)
+    avail = free + own_used
 
     def chunk_ctx(tokens_per_chunk):
         return min(24576, 2 * tokens_per_chunk + prefix_len + 3)
 
-    if free >= required:
+    if required <= avail:
         decision, context = "single", None
-        reason = (f"free {free:.1f} >= required {required:.1f} "
-                  f"({'peak-calibrated' if _mode_ready('single') else 'formula+margin1.5'})")
-    elif free >= measured:
+        reason = (f"required {required:.1f} <= avail {avail:.1f} "
+                  f"(free={free:.1f} own_used={own_used:.1f}, "
+                  f"{'peak-calibrated' if _mode_ready('single') else 'formula+margin1.5'})")
+    elif measured <= avail:
         decision, context = "tiling", 24576
-        reason = (f"free {free:.1f} < required {required:.1f}, "
-                  f">= measured {measured:.1f} (tiling+offload)")
+        reason = (f"required {required:.1f} > avail {avail:.1f}, "
+                  f"measured {measured:.1f} <= avail (tiling+offload, "
+                  f"free={free:.1f} own_used={own_used:.1f})")
     else:
-        chunk_tokens = min(_chunk_budget_tokens(free), n_tokens)
+        chunk_tokens = min(_chunk_budget_tokens(free, own_used), n_tokens)
         if chunk_tokens < _MIN_CHUNK_TOKENS:
             decision, context = "error", None
             reason = (f"бюджет чанка {chunk_tokens} ток. < минимума {_MIN_CHUNK_TOKENS}; "
-                      f"free {free:.1f} < required {required:.1f} и < measured {measured:.1f}")
+                      f"avail {avail:.1f} (free={free:.1f} own_used={own_used:.1f}) "
+                      f"< required {required:.1f} и < measured {measured:.1f}")
         else:
             decision, context = "chunked", chunk_ctx(chunk_tokens)
             n_chunks = (n_tokens + chunk_tokens - 1) // chunk_tokens
-            reason = (f"free {free:.1f} < measured {measured:.1f}; "
+            reason = (f"avail {avail:.1f} (free={free:.1f} own_used={own_used:.1f}) "
+                      f"< measured {measured:.1f}; "
                       f"чанк {chunk_tokens} ток. (~{chunk_tokens / _TOKENS_PER_MIN:.1f} мин), "
                       f"{n_chunks} чанков")
-    print(f"[LADDER] free={free:.1f} required={required:.1f} measured={measured:.1f} "
+    print(f"[LADDER] free={free:.1f} own_used={own_used:.1f} avail={avail:.1f} "
+          f"required={required:.1f} measured={measured:.1f} "
           f"chunk_min_tokens={_MIN_CHUNK_TOKENS} decision={decision} reason={reason}",
           flush=True)
     return decision, context, reason
@@ -367,7 +404,7 @@ def _synthesize_direct(pipe, semantic, context):
         return result.detach().float().cpu().numpy()
 
 
-def _synthesize(pipe, semantic, minutes, free):
+def _synthesize(pipe, semantic, minutes, free, own_used):
     """Этап synthesize: лестница single -> tiling -> chunked с peak-замерами
     ([PEAK]) и ступенчатым retry при OOM (следующая ступень, максимум 2 retry).
 
@@ -380,7 +417,7 @@ def _synthesize(pipe, semantic, minutes, free):
     prev_offload = pipe.offload_ar
     pipe.offload_ar = True
     try:
-        decision, context, reason = _ladder(minutes, free, n_tokens, prefix_len)
+        decision, context, reason = _ladder(minutes, free, n_tokens, prefix_len, own_used)
         attempts = []
         if decision == "single":
             attempts.append(("single", None))
@@ -389,13 +426,15 @@ def _synthesize(pipe, semantic, minutes, free):
         elif decision == "chunked":
             attempts.append(("chunked", context))
         else:
-            # Гейт: при достаточном free чанкование ОБЯЗАНО быть попытано.
-            if free >= _chunk_gate_free_gb():
+            # Гейт: при достаточном avail чанкование ОБЯЗАНО быть попытано.
+            gate_threshold = _chunk_gate_avail_gb(own_used)
+            avail = free + own_used
+            if avail >= gate_threshold:
                 context = min(24576, 2 * _SAFE_CHUNK_TOKENS + prefix_len + 3)
                 decision = "chunked"
                 attempts.append(("chunked", context))
-                print(f"[LADDER] gate override: free {free:.1f} >= "
-                      f"{_chunk_gate_free_gb():.1f} -> force chunked 1.0 мин", flush=True)
+                print(f"[GATE] avail {avail:.1f} (free={free:.1f} own_used={own_used:.1f}) "
+                      f">= {gate_threshold:.1f} -> force chunked 1.0 мин", flush=True)
             else:
                 raise RuntimeError(_gate_error(minutes, free, reason))
         # Ступени retry: single/tiling -> 2 чанка -> 4 чанка (максимум 2 retry).
@@ -485,17 +524,20 @@ def _run_song(pipe, request, session_dir):
     # --- VRAM-гейт перед синтезом ---
     minutes = _LAST_DURATION_SEC / 60.0
     free = _free_gb()
+    own_used = _own_used_gb()
+    avail = free + own_used
     if free < 6.0:
         raise RuntimeError(t("gate_vram", free=f"{free:.1f}"))
-    safe_free = _chunk_gate_free_gb()
-    if free < safe_free:
-        print(f"[GATE] free {free:.1f} GB < порога гарантированного 1.0-мин чанка "
-              f"{safe_free:.1f} GB — чанкование ограничено бюджетом free", flush=True)
+    gate_threshold = _chunk_gate_avail_gb(own_used)
+    if avail < gate_threshold:
+        print(f"[GATE] avail {avail:.1f} GB (free={free:.1f} own_used={own_used:.1f}) "
+              f"< порога гарантированного чанка {gate_threshold:.1f} GB — "
+              f"чанкование ограничено бюджетом", flush=True)
     _mark("[VRAM] before synthesize")
 
     # --- Этап 3: synthesize (P2: offload AR, P3: авто-чанкование) ---
     nar_start = time.perf_counter()
-    latents = _synthesize(pipe, semantic, minutes, free)
+    latents = _synthesize(pipe, semantic, minutes, free, own_used)
     nar_seconds = time.perf_counter() - nar_start
     _mark("[VRAM] after synthesize")
 
